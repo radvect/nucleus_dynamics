@@ -1,0 +1,3 @@
+/home/pavel/nucleus_dynamics/CMM_dealii/build/CMakeFiles/cmm.dir
+/home/pavel/nucleus_dynamics/CMM_dealii/build/CMakeFiles/edit_cache.dir
+/home/pavel/nucleus_dynamics/CMM_dealii/build/CMakeFiles/rebuild_cache.dir

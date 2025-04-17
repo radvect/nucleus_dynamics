@@ -7,41 +7,38 @@ from dolfinx.fem.petsc import assemble_matrix, assemble_vector, create_vector
 import meshio
 
 try:
-    import gmsh  # type: ignore
+    import gmsh  
 except ImportError:
     print("This script requires gmsh to be installed")
     exit(0)
 
-# Инициализация Gmsh
+
 gmsh.initialize()
 gmsh.option.setNumber("General.Terminal", 0)
 
-# Создаем модель
 model = gmsh.model()
 model.add("circle")
 
-# Создаем окружность и область внутри неё
 circle = model.occ.addCircle(0, 0, 0, 1)
 loop = model.occ.addCurveLoop([circle])
 surface = model.occ.addPlaneSurface([loop])
 
-# Синхронизация модели
+
 model.occ.synchronize()
 gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.01)
 gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 0.01)
 
-# Добавляем физические группы
+
 model.add_physical_group(dim=1, tags=[circle], name="Boundary")
 model.add_physical_group(dim=2, tags=[surface], name="Interior")
 
-# Генерация сетки
+
 model.mesh.generate(dim=2)
 
-# Сохраняем сетку в формате MSH
+
 gmsh.write("circle.msh")
 gmsh.finalize()
 
-# Читаем созданную сетку и конвертируем в формат XDMF
 mesh1 = meshio.read("circle.msh")
 triangle_mesh = meshio.Mesh(
     points=mesh1.points,
@@ -49,12 +46,11 @@ triangle_mesh = meshio.Mesh(
 )
 meshio.write("circle.xdmf", triangle_mesh)
 
-# Загружаем сетку в DOLFINx
+
 with io.XDMFFile(MPI.COMM_WORLD, "circle.xdmf", "r") as xdmf:
     domain = xdmf.read_mesh(name="Grid")
     domain.topology.create_connectivity(domain.topology.dim - 1, domain.topology.dim)
 
-# Функциональные пространства
 V = fem.functionspace(domain, ("Lagrange", 1))
 U = fem.functionspace(domain, ("Lagrange", 1, (domain.topology.dim,)))  
 print(U.ufl_element())
@@ -80,12 +76,11 @@ f.interpolate(source_function)
 p, v = ufl.TrialFunction(V), ufl.TestFunction(V)
 u = ufl.TrialFunction(U)
 
-dt = 1.0 / 50  # Временной шаг
+dt = 1.0 / 50  
 k = 1
 C = 1
 C1 = 1
 
-# Уравнение для p
 a = C*p * v * ufl.dx + k*dt * ufl.dot(ufl.grad(p), ufl.grad(v)) * ufl.dx
 L = (p_n - dt * f) * v * ufl.dx
 
@@ -100,7 +95,6 @@ A.assemble()
 b = create_vector(linear_form)
 
 
-# Создаем два отдельных решателя
 solver_p = PETSc.KSP().create(domain.comm)
 solver_p.setOperators(A)
 solver_p.setType(PETSc.KSP.Type.PREONLY)
