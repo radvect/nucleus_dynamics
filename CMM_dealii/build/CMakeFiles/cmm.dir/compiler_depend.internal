@@ -2811,6 +2811,8 @@ CMakeFiles/cmm.dir/cmm.cc.o
  /usr/local/dealii/include/deal.II/fe/fe_dgq.h
  /usr/local/dealii/include/deal.II/fe/fe_poly.h
  /usr/local/dealii/include/deal.II/fe/fe_poly_tensor.h
+ /usr/local/dealii/include/deal.II/fe/fe_q.h
+ /usr/local/dealii/include/deal.II/fe/fe_q_base.h
  /usr/local/dealii/include/deal.II/fe/fe_raviart_thomas.h
  /usr/local/dealii/include/deal.II/fe/fe_system.h
  /usr/local/dealii/include/deal.II/fe/fe_tools.h

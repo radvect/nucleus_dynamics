@@ -405,7 +405,7 @@ void CellMot<dim>::make_grid_and_dofs ()
   grid_1();
   //GridGenerator::hyper_shell (triangulation,Point<dim>(0,0),0.5,1.0,96,false);
   //GridGenerator::hyper_ball (triangulation);
-  static const SphericalManifold<dim> boundary;
+  static const SphericalManifold<dim> boundary(Point<dim>(1.0, 1.0, 1.0));
   triangulation.set_all_manifold_ids(0);
   triangulation.set_manifold(0, boundary);
   refine = parameters.get_integer ("refine");

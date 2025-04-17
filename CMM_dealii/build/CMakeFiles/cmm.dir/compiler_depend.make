@@ -2810,6 +2810,8 @@ CMakeFiles/cmm.dir/cmm.cc.o: /home/pavel/nucleus_dynamics/CMM_dealii/cmm.cc \
   /usr/local/dealii/include/deal.II/fe/fe_dgq.h \
   /usr/local/dealii/include/deal.II/fe/fe_poly.h \
   /usr/local/dealii/include/deal.II/fe/fe_poly_tensor.h \
+  /usr/local/dealii/include/deal.II/fe/fe_q.h \
+  /usr/local/dealii/include/deal.II/fe/fe_q_base.h \
   /usr/local/dealii/include/deal.II/fe/fe_raviart_thomas.h \
   /usr/local/dealii/include/deal.II/fe/fe_system.h \
   /usr/local/dealii/include/deal.II/fe/fe_tools.h \
@@ -3045,6 +3047,8 @@ CMakeFiles/cmm.dir/cmm.cc.o: /home/pavel/nucleus_dynamics/CMM_dealii/cmm.cc \
 /usr/local/dealii/include/deal.II/fe/fe_values.h:
 
 /usr/local/dealii/include/deal.II/fe/fe_update_flags.h:
+
+/usr/local/dealii/include/deal.II/fe/fe_q.h:
 
 /usr/local/dealii/include/deal.II/fe/fe_poly.h:
 
@@ -8567,6 +8571,8 @@ CMakeFiles/cmm.dir/cmm.cc.o: /home/pavel/nucleus_dynamics/CMM_dealii/cmm.cc \
 /root/miniconda3/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/algorithm:
 
 /root/miniconda3/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/atomic:
+
+/usr/local/dealii/include/deal.II/fe/fe_q_base.h:
 
 /root/miniconda3/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/bits/locale_facets.h:
 
