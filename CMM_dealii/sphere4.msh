@@ -484,3 +484,28 @@ $Elements
 278 5 2 0 30 81 83 79 30 139 198 183 118
 279 5 2 0 30 100 101 152 116 118 183 198 139
 $EndElements
+//+
+SetFactory("OpenCASCADE");
+Sphere(31) = {0, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+SetFactory("OpenCASCADE");
+Sphere(31) = {0, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+Sphere(32) = {0, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+Sphere(33) = {0, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+Sphere(34) = {0, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+Sphere(35) = {0.2, -0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+Sphere(36) = {0, -0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+Sphere(37) = {-0.2, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+SetFactory("OpenCASCADE");
+Sphere(31) = {0, 0, 0, 0.5, -Pi/2, Pi/2, 2*Pi};
+//+
+BooleanDifference{ Surface{22}; Surface{26}; Volume{30}; Surface{24}; Delete; }{ Curve{14}; Delete; }
+//+
+BooleanDifference{ Surface{20}; Surface{18}; Volume{30}; Delete; }{ Curve{14}; Delete; }

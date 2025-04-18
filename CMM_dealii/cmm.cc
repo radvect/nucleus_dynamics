@@ -68,12 +68,8 @@ private:
   void solve4 (BlockVector<double> &return_vector);
   void solve5 (BlockVector<double> &return_vector);
   void solve6 (BlockVector<double> &return_vector);
-  void solve_a ();
-  void solve_m ();
   void output_results () const;
   void output_results_v () const;
-  void output_results_a () const;
-  void output_results_m () const;
   void output_results_f () const;
   void output_results_u () const;
   void l2_diff ();
@@ -95,46 +91,23 @@ private:
   SparseMatrix<double> old_mass;   
   SparseMatrix<double> mass_matrix;
   SparseMatrix<double> laplace_matrix;
-  SparseMatrix<double> system_matrix_a;
-  SparseMatrix<double> system_matrix_m;
-  Vector<double>       sol_a;
-  Vector<double>       old_a;
-  Vector<double>       a_rhs;
-  Vector<double>       sol_m;
-  Vector<double>       old_m;
-  Vector<double>       m_rhs;
 
   Vector<double>       displacement;
   Vector<double>       old_displacement;
   double	pr;	
   double       	youngs;
   double       	nu;
-  double       	da;
-  double        dm;
-  double       	ka;
-  double        kam;
-  double        km;
-  double        kma;
-  double       	asat;
-  double        mu1 ;
-  double        mu2 ;
   double  c11;
   double  c12;
   double  c33;
   double  d11;
   double  d12;
   double  d33;
-  double        ac ;
-  double        mc ;
-  double        psi;
-  double 	c;
-  double        K;
+
   int 	 	refine;
   double        time;
   double        time_step;
   unsigned int  timestep_number;
-  double L2_error_a;
-  double L2_error_m;
   double x;
   double vol1;
 ParameterHandler parameters;
@@ -166,152 +139,6 @@ void CellMot<dim>::grid_1 ()
 }
 
 
-// INITIAL DATA FOR ACTIN EQUATION
-
-template <int dim>
-class InitialValues : public Function<dim>
-{
-public:
-  InitialValues () : Function<dim>(3) {}
-  virtual void vector_value (const Point<dim> &p,
-                                Vector<double>   &value) const;
-  virtual void vector_value_list (const std::vector<Point<dim> > &points,
-                                     std::vector<Vector<double> >   &values) const;
-};
-
-
-template <int dim>
-void
-InitialValues<dim>::vector_value (const Point<dim> &p,
-                                  Vector<double>   &values) const
-{
-  Assert (values.size() == 3,
-  ExcDimensionMismatch (values.size(), 3));
-double x=p[0];
-double y=p[1];
-double z=p[2];
-double r=sqrt(x*x+y*y+z*z);
-double k = 2.08158;//3.34209;//2.08158;/
-if (r==0)
-  {
-  values(0)=1.0;
-  values(1)=1.0;
-  values(2)=1.0;
-  }
-else
-  {
-
-/*values(0) = 1-((15/(k*k*k*r*r*r)-6/(k*r))*sin(k*r)/(k*r)-(15/(k*r*k*r)-1)*cos(k*r)/(k*r))*
-                z*(2*z*z-3*x*x-3*y*y)/(r*r*r)*std::rand()/RAND_MAX;
-values(1) = 1-((15/(k*k*k*r*r*r)-6/(k*r))*sin(k*r)/(k*r)-(15/(k*r*k*r)-1)*cos(k*r)/(k*r))*
-                z*(2*z*z-3*x*x-3*y*y)/(r*r*r)*std::rand()/RAND_MAX;
-values(2) = 1-((15/(k*k*k*r*r*r)-6/(k*r))*sin(k*r)/(k*r)-(15/(k*r*k*r)-1)*cos(k*r)/(k*r))*
-                z*(2*z*z-3*x*x-3*y*y)/(r*r*r)*std::rand()/RAND_MAX;
-
-
-    values(0) = 0.95+0.1*std::rand()/RAND_MAX;// (((sin(k*r)/(k*r*k*r)-cos(k*r)/(k*r))*p[0]/r)*std::rand()/RAND_MAX);
-    values(1) = 0.95+0.1*std::rand()/RAND_MAX;// (((sin(k*r)/(k*r*k*r)-cos(k*r)/(k*r))*p[0]/r)*std::rand()/RAND_MAX);
-    values(2) = 0.95+0.1*std::rand()/RAND_MAX;// (((sin(k*r)/(k*r*k*r)-cos(k*r)/(k*r))*p[0]/r)*std::rand()/RAND_MAX);
-*/
-  values(0) = 1.0+0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (-x*x-y*y+2*z*z)/(r*r))*std::rand()/RAND_MAX;
-  values(1) = 1.0+0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (-x*x-y*y+2*z*z)/(r*r))*std::rand()/RAND_MAX;
-  values(2) = 1.0+0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (-x*x-y*y+2*z*z)/(r*r))*std::rand()/RAND_MAX;
-/*    values(0) = 1.0+0.01*r*std::rand()/RAND_MAX;
-    values(1) = 1.0+0.01*r*std::rand()/RAND_MAX;
-    values(2) = 1.0+0.01*r*std::rand()/RAND_MAX;*/
-  } 
-}
-
-template <int dim>
-void InitialValues<dim>::vector_value_list (const std::vector<Point<dim> > &points,
-                                            std::vector<Vector<double> >   &value_list) const
-{
-const unsigned int n_points = points.size();
-for (unsigned int p=0; p<n_points; ++p)
-InitialValues<dim>::vector_value (points[p], value_list[p]);
-}
-
-// INITIAL DATA FOR MYOSIN EQUATION
-template <int dim>
-class InitialMyosin : public Function<dim>
-{
-public:
-  InitialMyosin () : Function<dim>(3) {}
-  virtual void vector_value (const Point<dim> &p,
-                                Vector<double>   &value) const;
-  virtual void vector_value_list (const std::vector<Point<dim> > &points,
-                                     std::vector<Vector<double> >   &values) const;
-};
-
-
-template <int dim>
-void
-InitialMyosin<dim>::vector_value (const Point<dim> &p,
-                                  Vector<double>   &values) const
-{
-  Assert (values.size() == 3,
-  ExcDimensionMismatch (values.size(), 3));
-double x=p[0];
-double y=p[1];
-double z=p[2];
-double r=sqrt(x*x+y*y+z*z);
-double k = 2.08158;//3.34209;
-if (r==0)
-  {
-  values(0)=1.0;
-  values(1)=1.0;
-  values(2)=1.0;
-  }
-else
-  {
-/*  values(0) = 1.0-0.1*((sin(k*r)/(k*r*k*r)-cos(k*r)/(k*r))*z/r)*std::rand()/RAND_MAX;
-  values(1) = 1.0-0.1*((sin(k*r)/(k*r*k*r)-cos(k*r)/(k*r))*z/r)*std::rand()/RAND_MAX;
-  values(2) = 1.0-0.1*((sin(k*r)/(k*r*k*r)-cos(k*r)/(k*r))*z/r)*std::rand()/RAND_MAX;
-
-values(0) = 0.9+((15/(k*k*k*r*r*r)-6/(k*r))*sin(k*r)/(k*r)-(15/(k*r*k*r)-1)*cos(k*r)/(k*r))*
-                z*(2*z*z-3*x*x-3*y*y)/(r*r*r)*std::rand()/RAND_MAX;
-values(1) = 0.9+((15/(k*k*k*r*r*r)-6/(k*r))*sin(k*r)/(k*r)-(15/(k*r*k*r)-1)*cos(k*r)/(k*r))*
-                z*(2*z*z-3*x*x-3*y*y)/(r*r*r)*std::rand()/RAND_MAX;
-values(2) = 0.9+((15/(k*k*k*r*r*r)-6/(k*r))*sin(k*r)/(k*r)-(15/(k*r*k*r)-1)*cos(k*r)/(k*r))*
-                z*(2*z*z-3*x*x-3*y*y)/(r*r*r)*std::rand()/RAND_MAX;
-*/
-  values(0) = 1.0-0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (-x*x-p[1]*p[1]+2*p[2]*p[2])/(r*r))*std::rand()/RAND_MAX;
-  values(1) = 1.0-0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (-x*x-p[1]*p[1]+2*p[2]*p[2])/(r*r))*std::rand()/RAND_MAX;
-  values(2) = 1.0-0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (-x*x-p[1]*p[1]+2*p[2]*p[2])/(r*r))*std::rand()/RAND_MAX;
-/*
-  values(0) = 0.9+0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (x*y)/(r*r))*std::rand()/RAND_MAX;
-  values(1) = 0.9+0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (x*y)/(r*r))*std::rand()/RAND_MAX;
-  values(2) = 0.9+0.1*(((3/(k*k*r*r)-1)*sin(k*r)/(k*r)-3*cos(k*r)/(k*r*k*r))*
-                        (x*y)/(r*r))*std::rand()/RAND_MAX;*/
-}
-/*if(abs(p[0])<0.2)
-{
-  values(0) = 1.0+0.1*p[0]*std::rand()/RAND_MAX;
-  values(1) = 1.0+0.1*p[0]*std::rand()/RAND_MAX;
-}
-else  
-{
-  values(0) = 1.0+0.02*p[0]/abs(p[0])*std::rand()/RAND_MAX;
-  values(1) = 1.0+0.02*p[0]/abs(p[0])*std::rand()/RAND_MAX;
-}*/
-}
-
-template <int dim>
-void InitialMyosin<dim>::vector_value_list (const std::vector<Point<dim> > &points,
-                                            std::vector<Vector<double> >   &value_list) const
-{
-const unsigned int n_points = points.size();
-for (unsigned int p=0; p<n_points; ++p)
-InitialMyosin<dim>::vector_value (points[p], value_list[p]);
-}
 
 
 // CLASS IMPLIMENTATION AND DECLARING PARAMETERS
@@ -331,42 +158,7 @@ parameters.declare_entry ("youngs", "1.5",
 parameters.declare_entry ("nu", "0.3",
                           Patterns::Double (0, 10),
                           "Poisson ratio of actin network");
-parameters.declare_entry ("da", "0.012",
-                          Patterns::Double (0, 10),
-                          "Diffusion coefficient of actin");
-parameters.declare_entry ("dm", "0.0012",
-                          Patterns::Double (0, 10),
-                          "Diffusion coefficient of myosin");
-parameters.declare_entry ("ka", "0.03",
-                          Patterns::Double (0, 10),
-                          "polymerisation rate of actin network");
-parameters.declare_entry ("kma", "0.01",
-                          Patterns::Double (0, 10),
-                          "rate of myosin increase by actin");
-parameters.declare_entry ("km", "0.03",
-                          Patterns::Double (-1, 1),
-                          "rate of myosin increase by actin");
-parameters.declare_entry ("kam", "0.01",
-                          Patterns::Double (0, 10),
-                          "depolymerisation rate by myosin");
-parameters.declare_entry ("asat", "1.4",
-                           Patterns::Double (0, 10),
-                           "saturation concentration of F-actin");
-parameters.declare_entry ("mu1", "96.15",
-                          Patterns::Double (0, 100),
-                          "Shear viscosity of the actin network");
-parameters.declare_entry ("mu2", "250",
-                          Patterns::Double (0, 300),
-                          "Bulk viscosity of the actin network");
-parameters.declare_entry ("ac", "1",
-                          Patterns::Double (0, 10),
-                          "F-actin concentration at the chemical equilibrium");
-parameters.declare_entry ("mc", "1",
-                          Patterns::Double (0, 10),
-                          "myosin concentration at the chemical equilibrium");
-parameters.declare_entry ("psi", "74.34",
-                          Patterns::Double (0, 10000),
-                          "contractile tonicity");
+
 parameters.declare_entry ("pr", "0.26",
                           Patterns::Double (-2, 10),
                           "pressure coefficient");
@@ -376,12 +168,7 @@ parameters.declare_entry ("refine", "4",
 parameters.declare_entry ("tol", "0.0001",
                           Patterns::Double (0, 1),
                           "tolerance");
-parameters.declare_entry ("c", "200",
-                          Patterns::Double (-10000, 10000),
-                          "contraction due to myosin constant");
-parameters.declare_entry ("K", "1",
-                          Patterns::Double (-100, 100),
-                          "constant in RDEs");
+
 
 parameters.parse_input (prm_file);
 }
@@ -459,20 +246,10 @@ void CellMot<dim>::make_grid_and_dofs ()
 				  constraints,
 				  /*keep_constrained_dofs = */ true);
   sparsity_pattern_a.copy_from(c_sparsity);
-  
   old_mass.reinit(sparsity_pattern_a);
   mass_matrix.reinit(sparsity_pattern_a);
   laplace_matrix.reinit(sparsity_pattern_a);
-  system_matrix_a.reinit(sparsity_pattern_a);
-  system_matrix_m.reinit(sparsity_pattern_a);
-  
-  sol_a.reinit(dof_handler.n_dofs());
-  old_a.reinit(dof_handler.n_dofs());
-  a_rhs.reinit(dof_handler.n_dofs());
-  
-  sol_m.reinit(dof_handler.n_dofs());
-  old_m.reinit(dof_handler.n_dofs());
-  m_rhs.reinit(dof_handler.n_dofs());
+
   displacement.reinit(dof_handler.n_dofs());
 }
 
@@ -484,28 +261,12 @@ void CellMot<dim>::get_params()
 time_step = parameters.get_double ("timestep");
 youngs = parameters.get_double ("youngs");
 nu = parameters.get_double ("nu");
-asat = parameters.get_double ("asat");
-mu1 = parameters.get_double ("mu1");
-mu2 = parameters.get_double ("mu2");
-psi = parameters.get_double ("psi");
-c = parameters.get_double ("c");
+
 c11 = youngs*(1-nu)/((1+nu)*(1-2*nu));
 c12 = youngs*nu/((1+nu)*(1-2*nu));
 c33 = youngs/(2*(1+nu));
-d11 = mu1+mu2;
-d12 = mu2;
-d33 = mu1/2;
 
-ka = parameters.get_double ("ka");
-kam = parameters.get_double ("kam");
-km = parameters.get_double ("km");
-kma = parameters.get_double ("kma");
-da = parameters.get_double ("da");
-dm = parameters.get_double ("dm");
-ac = parameters.get_double ("ac");
-mc = parameters.get_double ("mc");
 pr = parameters.get_double ("pr");
-K = parameters.get_double ("K");
 }
 
 template <int dim>
@@ -579,10 +340,8 @@ void CellMot<dim>::assemble_system_parts ()
 A_matrix=0;
 B_matrix=0;
 system_matrix = 0;
-old_mass = 0;
 system_rhs = 0;
-a_rhs = 0;
-m_rhs = 0;
+
 double p1;
 
 // Defining the type of quadrature
@@ -604,8 +363,7 @@ const unsigned int   n_face_q_points = face_quadrature_formula.size();
 std::vector<types::global_dof_index>  local_face_dof_indices  (fe.dofs_per_face);
 std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
 
-Vector<double> cell_a_rhs (dofs_per_cell);
-Vector<double> cell_m_rhs (dofs_per_cell);
+
 Vector<double> cell_1rhs (dofs_per_cell);
 Vector<double> cell_2rhs (dofs_per_cell);
 Vector<double> cell_3rhs (dofs_per_cell);
@@ -647,8 +405,6 @@ std::vector<Vector<double> >      w_value(n_q_points, Vector<double>(dim));
 std::vector<Vector<double> >      old_u_value(n_q_points, Vector<double>(dim));
 std::vector<Vector<double> >      old_v_value(n_q_points, Vector<double>(dim));
 std::vector<Vector<double> >      old_w_value(n_q_points, Vector<double>(dim));
-std::vector<Vector<double> >      old_a_value(n_q_points, Vector<double>(dim));
-std::vector<Vector<double> >      old_m_value(n_q_points, Vector<double>(dim));
 
 std::vector<std::vector<Tensor<1,dim> > >  u_grad(n_q_points,
         std::vector<Tensor<1,dim> > (dim));
@@ -689,7 +445,6 @@ for (; cell!=endc; ++cell)
    cell_b31 = 0;
    cell_b32 = 0;
    cell_b33 = 0;
-   cell_a_rhs = 0;
    cell_1rhs = 0;
    cell_2rhs = 0;
    cell_3rhs = 0;
@@ -714,8 +469,6 @@ for (; cell!=endc; ++cell)
    fe_values.get_function_values (old_sol.block(0), old_u_value);
    fe_values.get_function_values (old_sol.block(1), old_v_value);
    fe_values.get_function_values (old_sol.block(2), old_w_value);
-   fe_values.get_function_values (old_a, old_a_value);
-   fe_values.get_function_values (old_m, old_m_value);
    fe_values.get_function_values (solution.block(0), u_value);
    fe_values.get_function_values (solution.block(1), v_value);
    fe_values.get_function_values (solution.block(2), w_value);
@@ -733,10 +486,7 @@ for (; cell!=endc; ++cell)
 	   const double dphi_i_dy = fe_values.shape_grad (i, q_index).operator[](1);
            const double dphi_i_dz = fe_values.shape_grad (i, q_index).operator[](2);
 
-	   cell_a_rhs(i) += phi_i* JxW;
-           p1 = (pr*(1 + 2 * atan(old_a_value[q_index](0))* delta /M_PI)/(1+dilation)
-                 +   c*old_m_value[q_index](0)
-		 + psi* exp(-old_a_value[q_index](0)/asat)*(old_a_value[q_index](0)*old_a_value[q_index](0)) );
+           p1 = 0;
            f1(i) += -p1 * dphi_i_dx * JxW;
            f2(i) += -p1 * dphi_i_dy * JxW;
            f3(i) += -p1 * dphi_i_dz * JxW;
@@ -805,9 +555,7 @@ for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
             {
             const double dilation = u_grad[q_index][0][0]+v_grad[q_index][1][1]
                                         +w_grad[q_index][2][2];
-            p1 = (pr*(1+2 * atan(old_a_value[q_index](0))* delta /M_PI)/(1+dilation)
-                 +c*old_m_value[q_index](0)+
-		 psi * exp(-old_a_value[q_index](0)/asat)*(old_a_value[q_index](0)*old_a_value[q_index](0))) ;
+            p1 = 0;
 
             f1(i) += p1 * fe_face_values.shape_value (i, q_index) * 
 		  fe_face_values.JxW (q_index) * fe_face_values.normal_vector(q_index)[0];
@@ -845,8 +593,6 @@ constraints.distribute_local_to_global (cell_b33,local_dof_indices,B_matrix.bloc
 
 for (unsigned int i=0; i<dofs_per_cell; ++i)
    {
-   a_rhs(local_dof_indices[i]) += cell_a_rhs(i);
-   m_rhs(local_dof_indices[i]) += cell_a_rhs(i);
    system_rhs.block(0)(local_dof_indices[i]) += f1(i);
    system_rhs.block(1)(local_dof_indices[i]) += f2(i);
    system_rhs.block(2)(local_dof_indices[i]) += f3(i);
@@ -863,61 +609,6 @@ system_matrix.add(time_step,B_matrix);
 
 system_rhs.operator*=(time_step);
 A_matrix.vmult_add(system_rhs,old_solution);
-}
-
-// assemble LHS AND RHS for RDE
-template <int dim>
-void CellMot<dim>::assemble_system_a_m ()
-{
-Vector<double>       tmp;
-Vector<double>       tmp2;
-Vector<double>       tmp3;
-
-
-
-a_rhs.operator*=(ka*ac);
-m_rhs.operator*=(-kma*ac);
-
-tmp.operator=(old_a);
-tmp.operator*=(-ka);
-old_mass.vmult_add(a_rhs, tmp);
-tmp.operator*=(-kma/ka);
-old_mass.vmult_add(m_rhs, tmp);
-
-tmp2.operator=(old_m);
-tmp2.operator*=(-1);
-tmp2.add(1);
-tmp2.scale(old_a);
-tmp2.scale(old_a);
-
-tmp.operator/=(kma);
-tmp.scale(old_a);
-tmp.operator*=(K);
-tmp.add(1);
-
-tmp3.operator=(tmp2);
-for (unsigned int i = 0; i < tmp2.size(); ++i)
-  tmp3[i] = tmp2[i] / tmp[i];
-
-tmp3.operator*=(kam);
-
-old_mass.vmult_add(a_rhs, tmp3);
-tmp3.operator*=(-1);
-old_mass.vmult_add(m_rhs, tmp3);
-
-a_rhs.operator*=(time_step);
-old_mass.vmult_add(a_rhs,old_a);
-m_rhs.operator*=(time_step);
-old_mass.vmult_add(m_rhs,old_m);
-
-
-system_matrix_a.copy_from(laplace_matrix);
-system_matrix_a.operator*=(time_step*da);
-system_matrix_a.add(1, mass_matrix);
-
-system_matrix_m.copy_from(laplace_matrix);
-system_matrix_m.operator*=(time_step*dm);
-system_matrix_m.add(1, mass_matrix);
 }
 
 // SOLVE BLOCK SYSTEM (multiple codes to reduce tolerance over time)
@@ -986,128 +677,6 @@ solver.solve (system_matrix, return_vector, system_rhs,
               PreconditionIdentity());
 }
 
-// Solve RDE actin
-template<int dim>
-void CellMot<dim>::solve_a()
-{
-SolverControl solver_control(1000, 1e-10 * a_rhs.l2_norm());
-SolverCG<> cg(solver_control);
- 
-PreconditionSSOR<> preconditioner;
-preconditioner.initialize(system_matrix_a, 1.0);
-cg.solve(system_matrix_a, sol_a, a_rhs,
-         preconditioner);
- 
-constraints.distribute(sol_a);
-}
-
-// Solve RDE myosin
-template<int dim>
-void CellMot<dim>::solve_m()
-{
-SolverControl solver_control(1000, 1e-10 * m_rhs.l2_norm());
-SolverCG<> cg(solver_control);
-
-PreconditionSSOR<> preconditioner;
-preconditioner.initialize(system_matrix_m, 1.0);
-cg.solve(system_matrix_m, sol_m, m_rhs,
-         preconditioner);
-
-constraints.distribute(sol_m);
-}
-
-
-
-// output actin
-template<int dim>
-void CellMot<dim>::output_results_a() const
-{
-DataOut<dim> data_out;
-data_out.attach_dof_handler(dof_handler);
-data_out.add_data_vector(sol_a, "A");
-data_out.build_patches();
-
-int psii =(int)psi;
-int decp = (int)abs(pr*1000);
-int ci =(int)abs(c);
-int decdm = (int)abs(dm*1000);
-int decka = (int)abs(ka*1000);
-int deckm = (int)abs(km*1000);
-int deckma = (int)abs(kma*1000);
-int deckam = (int)abs(kam*1000);
-int decK = (int)K;
-
-const std::string filename = "grt3dfb_asq_a20m-20_2_t0-005_ref" +
-  	              		  Utilities::int_to_string(refine, 1) +
-                                  "_K"
-                                  + Utilities::int_to_string(decK, 2) +
-                		  "_p_"
-				  + Utilities::int_to_string(decp, 5) +
-				  "_psi_" + 
-                		  Utilities::int_to_string(psii, 4) +
-                                  "_c_-" +
-                                  Utilities::int_to_string(ci, 4) +
-                                  "_dm_0-"+
-                                  Utilities::int_to_string(decdm, 3) +
-                                  "_ka_0-"+
-                                  Utilities::int_to_string(decka, 3) +
-                                  "_km_0-"+
-                                  Utilities::int_to_string(deckm, 3) +
-                                  "_kma_0-"+
-                                  Utilities::int_to_string(deckma, 3) +
-                                  "_kam_0-"+
-                                  Utilities::int_to_string(deckam, 3) +
-				  "-a-sol"
-                                  + Utilities::int_to_string(timestep_number, 9) +
-                                  ".vtk";
-std::ofstream output(filename.c_str());
-data_out.write_vtk(output);
-}
-
-// output myosin
-template<int dim>
-void CellMot<dim>::output_results_m() const
-{
-DataOut<dim> data_out;
-data_out.attach_dof_handler(dof_handler);
-data_out.add_data_vector(sol_m, "M");
-data_out.build_patches();
-
-int psii =(int)psi;
-int decp = (int)abs(pr*1000);
-int ci =(int)abs(c);
-int decdm = (int)abs(dm*1000);
-int decka = (int)abs(ka*1000);
-int deckm = (int)abs(km*1000);
-int deckma = (int)abs(kma*1000);
-int deckam = (int)abs(kam*1000);
-int decK = (int)K;
-const std::string filename = "grt3dfb_asq_a20m-20_2_t0-005_ref" +
-                                  Utilities::int_to_string(refine, 1) +
-                                  "_K"
-                                  + Utilities::int_to_string(decK, 2) +
-                                  "_p_"
-                                  + Utilities::int_to_string(decp, 5) +
-                                  "_psi_" +
-                                  Utilities::int_to_string(psii, 4) + 
-                                  "_c_-" +
-                                  Utilities::int_to_string(ci, 4) +
-                                  "_dm_0-"+
-                                  Utilities::int_to_string(decdm, 3) +
-                                  "_ka_0-"+
-                                  Utilities::int_to_string(decka, 3) +
-                                  "_km_0-"+
-                                  Utilities::int_to_string(deckm, 3) +
-                                  "_kma_0-"+
-                                  Utilities::int_to_string(deckma, 3) +
-                                  "_kam_0-"+
-                                  Utilities::int_to_string(deckam, 3) +
-                                  "-m-sol"
-                                  + Utilities::int_to_string(timestep_number, 9) +
-				  ".vtk";
-std::ofstream output(filename.c_str());
-data_out.write_vtk(output);
-}
 
 
 
@@ -1120,36 +689,10 @@ data_out.attach_dof_handler(dof_handler);
 data_out.add_data_vector(displacement,"D");
 data_out.build_patches();
 
-int psii =(int)psi;
 int decp = (int)abs(pr*1000);
-int ci =(int)abs(c);
-int decdm = (int)abs(dm*1000);
-int decka = (int)abs(ka*1000);
-int deckm = (int)abs(km*1000);
-int deckma = (int)abs(kma*1000);
-int deckam = (int)abs(kam*1000);
-int decK = (int)K;
-const std::string filename = "grt3dfb_asq_a20m-20_2_t0-005_ref" +
-                                  Utilities::int_to_string(refine, 1) +
-                                  "_K"
-                                  + Utilities::int_to_string(decK, 2) +
-                                  "_p_"
-                                  + Utilities::int_to_string(decp, 5) +
-                                  "_psi_" +
-                                  Utilities::int_to_string(psii, 4) +
-                                  "_c_-" +
-                                  Utilities::int_to_string(ci, 4) +
-                                  "_dm_0-"+
-                                  Utilities::int_to_string(decdm, 3) +
-                                  "_ka_0-"+
-                                  Utilities::int_to_string(decka, 3) +
-                                  "_km_0-"+
-                                  Utilities::int_to_string(deckm, 3) +
-                                  "_kma_0-"+
-                                  Utilities::int_to_string(deckma, 3) +
-                                  "_kam_0-"+
-                                  Utilities::int_to_string(deckam, 3) +
-				  "-disp"
+
+
+const std::string filename = "grt3dfb_asq_a20m-20_2_t0-005_ref"
                                   + Utilities::int_to_string(timestep_number, 9) +
                                   ".vtk";
 std::ofstream output(filename.c_str());
@@ -1169,33 +712,14 @@ data_out.write_vtk(output);
                                 Utilities::int_to_string(i));
 data_out.build_patches();
 
-int psii =(int)psi;
 int decp = (int)abs(pr*1000);
-int ci =(int)abs(c);
-int decdm = (int)abs(dm*1000);
-int decka = (int)abs(ka*1000);
-int deckm = (int)abs(km*1000);
-int deckma = (int)abs(kma*1000);
-int deckam = (int)abs(kam*1000);
+
+
 const std::string filename = "grt3dfb_asq_0-01rad_t0-005_ref" +
                                   Utilities::int_to_string(refine, 1) +
                                   "_p_"
-                                  + Utilities::int_to_string(decp, 5) +
-                                  "_psi_" +
-                                  Utilities::int_to_string(psii, 4) +
-                                  "_c_-" +
-                                  Utilities::int_to_string(ci, 4) +
-                                  "_dm_0-"+
-                                  Utilities::int_to_string(decdm, 3) +
-                                  "_ka_0-"+
-                                  Utilities::int_to_string(decka, 3) +
-                                  "_km_0-"+
-                                  Utilities::int_to_string(deckm, 3) +
-                                  "_kma_0-"+
-                                  Utilities::int_to_string(deckma, 3) +
-                                  "_kam_0-"+
-                                  Utilities::int_to_string(deckam, 3) +
-                                  "-U-"
+                                  + Utilities::int_to_string(decp, 5) +                           
+                                 "-U-"
                                   + Utilities::int_to_string(timestep_number, 9) +
                                   ".vtk";
 
@@ -1210,8 +734,6 @@ void CellMot<dim>::l2_diff ()
 {
 //Vector<double> difference_vector_u;
 //Vector<double> difference_vector_v;
-Vector<double> difference_vector_a;
-Vector<double> difference_vector_m;
 Vector<double> difference_vector_d;
 //double L2_error_u;
 //double L2_error_v;
@@ -1227,21 +749,13 @@ difference_vector_v.add(-1,old_solution.block(1));
 
 L2_error_u = difference_vector_u.l2_norm();
 L2_error_v = difference_vector_v.l2_norm();*/
-difference_vector_m.operator=(sol_m);
-difference_vector_m.add(-1,old_m);
-L2_error_m = difference_vector_m.l2_norm();
-difference_vector_a.operator=(sol_a);
-difference_vector_a.add(-1,old_a);
-L2_error_a = difference_vector_a.l2_norm();
 
 difference_vector_d.operator=(displacement);
 difference_vector_d.add(-1,old_displacement);
 L2_error_d = difference_vector_d.l2_norm();
 
 myfile.open ("l2_diff.txt", std::ofstream::app);
-myfile << "d l2: " << L2_error_d/time_step << "  "
-       << "m l2: " << L2_error_m/time_step << "  "
-       << "a l2: " << L2_error_a/time_step << std::endl;;
+myfile << "d l2: " << L2_error_d/time_step << "  ";
 
 myfile.close();
 }
@@ -1281,14 +795,7 @@ make_grid_and_dofs();
 get_params();
 on_membrane();
 // set initial values
-VectorTools::interpolate(dof_handler,
-                         InitialValues<dim>(),
-                         old_a);
-VectorTools::interpolate(dof_handler,
-                         InitialMyosin<dim>(),
-                         old_m);
-sol_a = old_a;
-sol_m = old_m;
+
 old_solution.operator=(0);
 solution = old_solution;
 old_sol = old_solution;
@@ -1298,8 +805,7 @@ time            = 0;
 
 // output initial conditions
 output_results_f();
-output_results_a();
-output_results_m();
+
 //output_results_u();
 
 // time loop
@@ -1328,13 +834,9 @@ while (time <= 1000000.0)
 	solve6 (solution);*/
 	move_mesh();
         makenewkm();
-        assemble_system_a_m ();
+
 	
-        std::cout << "solving a .. ";
-        solve_a ();
-        std::cout << "solving m .. ";
-        solve_m ();
-        std::cout << std::endl << std::endl;
+
 	
 	// OUTPUT VOLUME OF SHAPE
 	std::ofstream myfile;
@@ -1357,12 +859,8 @@ while (time <= 1000000.0)
                 {
         	l2_diff();
 		output_results_f();
-		output_results_a();
-        	output_results_m();
  //       output_results_u();
 		}
-        old_a = sol_a;
-        old_m = sol_m;
 
 	}// end time loop
   }// end run
