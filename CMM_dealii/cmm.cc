@@ -693,7 +693,8 @@ int decp = (int)abs(pr*1000);
 
 
 const std::string filename = "grt3dfb_asq_a20m-20_2_t0-005_ref"
-                                  + Utilities::int_to_string(timestep_number, 9) +
+                                  + Utilities::int_to_string(timestep_number, 9) + 
+                                  "disp_" +
                                   ".vtk";
 std::ofstream output(filename.c_str());
 data_out.write_vtk(output);
