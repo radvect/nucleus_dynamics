@@ -1,0 +1,58 @@
+# Listing of Parameters
+# ---------------------
+# F-actin concentration at the chemical equilibrium
+#set ac       = 1
+
+# myosin at equilibirum
+#set mc       = 1
+
+# saturation concentration of F-actin
+#set asat     = 1.4
+
+# Diffusion coefficient of actin
+#set da       = 0.01
+
+# Diffusion coefficient of myosin
+#set dm 	     =0.001
+
+# polymerisation rate of actin network
+#set ka       = 0.04
+
+#depolymerisation rate of actin network
+#set kam       = 0.06
+
+#set km	      = 0.7
+
+#set kma	      = 0.05
+
+# Shear viscosity of the actin network (2.5)
+#set mu1      = 96.15
+
+# Bulk viscosity of the actin network (6.5)
+#set mu2      = 250
+
+# Poisson ratio of actin network
+set nu       = 0.3
+
+# contractile tonicity
+#set psi      = 200
+
+# the size of time step
+set timestep = 0.5
+
+# Youngs Modulus of actin network 
+set youngs   = 1.5
+
+# pressure coefficient
+set pr 	     = 1.7
+
+# grid refinement
+set refine   = 1
+
+# contraction due to myosin
+#set c	     = -40
+# tolerance for solver for u
+set tol      = 1.3e-4
+
+# reaction constant K
+#set K	     = 1
