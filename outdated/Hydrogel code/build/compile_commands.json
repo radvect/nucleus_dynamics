@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/pavel/nucleus_dynamics/Hydrogel code/build",
-  "command": "/usr/bin/g++ -DDEBUG -D_GLIBCXX_ASSERTIONS -isystem /root/miniconda3/include/opencascade -isystem /usr/local/dealii/include -isystem /usr/local/dealii/include/deal.II/bundled -isystem /usr/lib/x86_64-linux-gnu/openmpi/include -isystem /usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -isystem /root/miniconda3/include -pedantic -Wall -Wextra -Wmissing-braces -Woverloaded-virtual -Wpointer-arith -Wsign-compare -Wsuggest-override -Wswitch -Wsynth -Wwrite-strings -Wno-placement-new -Wno-deprecated-declarations -Wno-literal-suffix -Wno-psabi -Wno-parentheses -Wno-unused-local-typedefs -fopenmp-simd -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /root/miniconda3/include -O0 -ggdb -Wa,--compress-debug-sections -o CMakeFiles/v1.0.dir/v1.0.cc.o -c \"/home/pavel/nucleus_dynamics/Hydrogel code/v1.0.cc\"",
-  "file": "/home/pavel/nucleus_dynamics/Hydrogel code/v1.0.cc",
-  "output": "CMakeFiles/v1.0.dir/v1.0.cc.o"
-}
-]
