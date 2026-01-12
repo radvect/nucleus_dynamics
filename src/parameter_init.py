@@ -19,7 +19,7 @@ def par_cytoplasm_init(msh):
 
     return E, nu, mu1, mu2, c_coupling
 
-def par_cytoplasm_init(msh):
+def par_nucleus_init(msh):
     """
     TODO: prototype for future equations
     """

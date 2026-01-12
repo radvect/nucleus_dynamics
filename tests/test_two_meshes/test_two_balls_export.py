@@ -2,17 +2,14 @@
 # u functions set up manually to be able to distinguish between 
 
 from __future__ import annotations
-
 from mpi4py import MPI
 from petsc4py import PETSc
 import numpy as np
-
 from dolfinx import fem, io
 from dolfinx.mesh import create_submesh
 from src.mesh_initialization import build_two_region_ball_mesh
 
 msh, ct, ft, dx_c, dx_n, ds_c, ds_n = build_two_region_ball_mesh()
-
 ids = np.unique(ct.values)
 print("Cell tags:", ids)  
 
