@@ -126,53 +126,21 @@ solver.rtol = 1e-8
 solver.atol = 1e-10
 solver.max_it = 25
 
-solver.rtol = 1e-8
-solver.atol = 1e-10
-solver.max_it = 25
+n_it, converged = solver.solve(u)
+u.x.scatter_forward()
 
-# --- time stepping ---
-solver.rtol = 1e-8
-solver.atol = 1e-10
-solver.max_it = 25
-
-# --- time stepping ---
-T_final = 1.0
-num_steps = 10
-dt_value = T_final / num_steps
-_dt.value = PETSc.ScalarType(dt_value)
 
 if MPI.COMM_WORLD.rank == 0:
-    print(f"dt = {dt_value}, num_steps = {num_steps}")
+    print(f"Newton iterations: {n_it}, converged = {converged}")
 
-# initial condition
-u.x.array[:] = 0.0
-u_prev.x.array[:] = 0.0
-u.x.scatter_forward()
-u_prev.x.scatter_forward()
 
 with io.XDMFFile(MPI.COMM_WORLD, "data/"+"nucleus_test.xdmf", "w") as xdmf:
     xdmf.write_mesh(msh)
     xdmf.write_function(u_inner)
 
-with io.XDMFFile(MPI.COMM_WORLD, "data/"+"cytoplasm_time_series.xdmf", "w") as xdmf:
+with io.XDMFFile(MPI.COMM_WORLD, "data/"+"cytoplasm_test.xdmf", "w") as xdmf:
     xdmf.write_mesh(msh)
-    xdmf.write_function(u, t=0.0)
-
-    for k in range(num_steps):
-        t = (k + 1) * dt_value
-        if MPI.COMM_WORLD.rank == 0:
-            print(f"Time step {k+1}/{num_steps}, t = {t}")
-
-        u_prev.x.array[:] = u.x.array
-        u_prev.x.scatter_forward()
-
-        n_it, converged = solver.solve(u)
-        u.x.scatter_forward()
-
-        if MPI.COMM_WORLD.rank == 0:
-            print(f"Newton iterations: {n_it}, converged = {converged}")
-
-        xdmf.write_function(u, t=t)
+    xdmf.write_function(u)
 
 if MPI.COMM_WORLD.rank == 0:
-    print("Written nucleus_test.xdmf and cytoplasm_time_series.xdmf")
+    print("Written nucleus_test.xdmf and cytoplasm_test.xdmf")
