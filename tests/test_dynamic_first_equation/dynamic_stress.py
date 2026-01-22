@@ -149,30 +149,43 @@ u.x.array[:] = 0.0
 u_prev.x.array[:] = 0.0
 u.x.scatter_forward()
 u_prev.x.scatter_forward()
+def tag(t: float) -> str:
+    return f"{t:.6f}"  # можно с точкой, как у тебя в outputu1.xdmf
 
-with io.XDMFFile(MPI.COMM_WORLD, "data/"+"nucleus_test.xdmf", "w") as xdmf:
-    xdmf.write_mesh(msh)
-    xdmf.write_function(u_inner)
+with io.XDMFFile(MPI.COMM_WORLD, "data/cytoplasm_time_series.xdmf", "w") as xdmf:
 
-with io.XDMFFile(MPI.COMM_WORLD, "data/"+"cytoplasm_time_series.xdmf", "w") as xdmf:
+    # t=0: пишем стартовый mesh
+    msh.name = "mesh_at_t0.000000"
     xdmf.write_mesh(msh)
-    xdmf.write_function(u, t=0.0)
+
+    # ВАЖНО: имя поля фиксированное
+    u.name = "u"
+    xdmf.write_function(u, 0.0, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
 
     for k in range(num_steps):
         t = (k + 1) * dt_value
-        if MPI.COMM_WORLD.rank == 0:
-            print(f"Time step {k+1}/{num_steps}, t = {t}")
 
+        # solve -> u
         u_prev.x.array[:] = u.x.array
         u_prev.x.scatter_forward()
 
         n_it, converged = solver.solve(u)
         u.x.scatter_forward()
 
-        if MPI.COMM_WORLD.rank == 0:
-            print(f"Newton iterations: {n_it}, converged = {converged}")
+        # деформируем геометрию ДО записи
+        msh.geometry.x[:] += u.x.array.reshape((-1, gdim))
 
-        xdmf.write_function(u, t=t)
+        # новый mesh на этом t
+        msh.name = f"mesh_at_t{tag(t)}"
+        xdmf.write_mesh(msh)
 
+        # пишем то же поле u в temporal коллекцию, но привязанное к этому mesh
+        xdmf.write_function(u, t, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
+
+        # reset displacement (если у тебя инкрементальная схема)
+        u_prev.x.array[:] = 0.0
+        u.x.array[:] = 0.0
+        u_prev.x.scatter_forward()
+        u.x.scatter_forward()
 if MPI.COMM_WORLD.rank == 0:
     print("Written nucleus_test.xdmf and cytoplasm_time_series.xdmf")
