@@ -72,8 +72,8 @@ import gmsh
 
 def build_two_region_ball_mesh(R_outer: float = 1.0,
                                R_inner: float = 0.4,
-                               lc_outer: float = 0.12,
-                               lc_inner: float = 0.08):
+                               lc_outer: float = 0.1,
+                               lc_inner: float = 0.05):
     
     gmsh.initialize()
     gmsh.model.add("cell_with_nucleus_3d")
@@ -130,7 +130,7 @@ def build_two_region_ball_mesh(R_outer: float = 1.0,
 
     dx = ufl.Measure("dx", domain=msh, subdomain_data=ct)
     ds = ufl.Measure("ds", domain=msh, subdomain_data=ft)
-
+    
     dx_c = dx(1)   
     dx_n = dx(2)   
     ds_c = ds(11)  

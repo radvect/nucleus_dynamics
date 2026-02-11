@@ -130,12 +130,10 @@ solver.rtol = 1e-8
 solver.atol = 1e-10
 solver.max_it = 25
 
-# --- time stepping ---
 solver.rtol = 1e-8
 solver.atol = 1e-10
 solver.max_it = 25
 
-# --- time stepping ---
 T_final = 1.0
 num_steps = 10
 dt_value = T_final / num_steps
@@ -150,15 +148,13 @@ u_prev.x.array[:] = 0.0
 u.x.scatter_forward()
 u_prev.x.scatter_forward()
 def tag(t: float) -> str:
-    return f"{t:.6f}"  # можно с точкой, как у тебя в outputu1.xdmf
+    return f"{t:.6f}" 
 
 with io.XDMFFile(MPI.COMM_WORLD, "data/cytoplasm_time_series.xdmf", "w") as xdmf:
 
-    # t=0: пишем стартовый mesh
     msh.name = "mesh_at_t0.000000"
     xdmf.write_mesh(msh)
 
-    # ВАЖНО: имя поля фиксированное
     u.name = "u"
     xdmf.write_function(u, 0.0, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
 
@@ -172,18 +168,16 @@ with io.XDMFFile(MPI.COMM_WORLD, "data/cytoplasm_time_series.xdmf", "w") as xdmf
         n_it, converged = solver.solve(u)
         u.x.scatter_forward()
 
-        # деформируем геометрию ДО записи
+
         msh.geometry.x[:] += u.x.array.reshape((-1, gdim))
 
-        # новый mesh на этом t
         msh.name = f"mesh_at_t{tag(t)}"
         xdmf.write_mesh(msh)
 
-        # пишем то же поле u в temporal коллекцию, но привязанное к этому mesh
         xdmf.write_function(u, t, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
 
-        # reset displacement (если у тебя инкрементальная схема)
-        u_prev.x.array[:] = 0.0
+
+        u_prev.x.array[:] = u.x.array[:]
         u.x.array[:] = 0.0
         u_prev.x.scatter_forward()
         u.x.scatter_forward()
