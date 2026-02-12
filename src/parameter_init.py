@@ -7,7 +7,7 @@ def par_cytoplasm_init(msh):
     E = fem.Constant(msh, PETSc.ScalarType(1.0))
     nu = fem.Constant(msh, PETSc.ScalarType(0.3))
     mu1 = fem.Constant(msh, PETSc.ScalarType(0.1))
-    mu2 = fem.Constant(msh, PETSc.ScalarType(0.05))
+    mu2 = fem.Constant(msh, PETSc.ScalarType(0.06))
     c_coupling = fem.Constant(msh, PETSc.ScalarType(1.0))
 
     # zeta = fem.Constant(msh, PETSc.ScalarType(5.0))  # drag in nucleus
@@ -56,7 +56,7 @@ def init_state(V, Q):
 
     # p(t=0) = z
     def p_init(x):
-        return 0.01*x[2]
+        return x[2]
 
     p.interpolate(p_init)
     p_prev.interpolate(p_init)

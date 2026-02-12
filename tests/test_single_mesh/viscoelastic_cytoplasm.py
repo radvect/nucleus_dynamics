@@ -12,7 +12,6 @@ import ufl
 from src.mesh_initialization import build_two_region_ball_mesh
 from src.parameter_init import init_state, par_cytoplasm_init
 import src.boundary_setup_displacement as bc_u
-# import src.boundary_setup_pressure as bc_p  # not used yet
 
 
 # -----------------------------
@@ -21,6 +20,9 @@ import src.boundary_setup_displacement as bc_u
 msh, ct, ft, dx_c, dx_n, ds_c, ds_n = build_two_region_ball_mesh()
 tdim = msh.topology.dim
 gdim = msh.geometry.dim
+
+outer_id = 1
+inner_id = 2
 
 # -----------------------------
 # Parameters
@@ -35,88 +37,66 @@ def eps(w):
 def phi(w):
     return ufl.tr(eps(w))
 
-
-ids = np.unique(ct.values)
 if MPI.COMM_WORLD.rank == 0:
-    print("Cell tags:", ids)
-
-outer_id = 1
-inner_id = 2
-if MPI.COMM_WORLD.rank == 0:
-    print(f"outer_id (cyto) = {outer_id}, inner_id (nucleus) = {inner_id}")
-
+    print("Cell tags:", np.unique(ct.values))
 
 # -----------------------------
 # Function spaces + state
 # -----------------------------
 V = fem.functionspace(msh, ("Lagrange", 1, (gdim,)))
 Q = fem.functionspace(msh, ("Lagrange", 1))
+u, u_prev, P, P_prev = init_state(V, Q)
 
-u_outer, u_outer_prev, P, P_prev = init_state(V, Q)
-
-# "Nucleus object" on SAME mesh: u but zeroed outside nucleus nodes
-u_nucleus_only = fem.Function(V, name="u_nucleus_only")
-u_nucleus_only.x.array[:] = 0.0
-u_nucleus_only.x.scatter_forward()
+v = ufl.TestFunction(V)
+du = ufl.TrialFunction(V)
 
 # -----------------------------
-# Build a DOF mask for nucleus nodes (no filters later)
-# For CG1 vector space: dofs correspond to vertices, block size = gdim
-# We mark a vertex as nucleus if it touches at least one nucleus cell (ct==inner_id)
+# Build a DOF mask for nucleus vertices (CG1 vector space)
+# Mark vertex as nucleus if it touches at least one nucleus cell (ct==inner_id)
+# Then expand to vector dofs
 # -----------------------------
-msh.topology.create_connectivity(0, tdim)  # vertex -> cell connectivity
+msh.topology.create_connectivity(0, tdim)
 v2c = msh.topology.connectivity(0, tdim)
 
-# Number of vertex-dofs (one per vertex) locally+ghost for this CG1 vector space
 imap = V.dofmap.index_map
-n_local_vertices = imap.size_local
-n_ghost_vertices = imap.num_ghosts
-n_total_vertices = n_local_vertices + n_ghost_vertices
+n_local = imap.size_local
+n_ghost = imap.num_ghosts
+n_total = n_local + n_ghost
 
-vertex_in_nucleus = np.zeros(n_total_vertices, dtype=bool)
-
-# Fill for local vertices (we can reliably query local incident cells and ct.values)
-for vtx in range(n_local_vertices):
+vertex_in_nucleus = np.zeros(n_total, dtype=bool)
+for vtx in range(n_local):
     cells = v2c.links(vtx)
-    if cells.size > 0 and np.any(ct.values[cells] == inner_id):
+    if cells.size and np.any(ct.values[cells] == inner_id):
         vertex_in_nucleus[vtx] = True
 
-# For ghost vertices, we don't have a clean, cheap way to decide without extra comms.
-# To avoid holes on partition boundaries, keep them "on" (safe default).
-if n_ghost_vertices > 0:
-    vertex_in_nucleus[n_local_vertices:] = True
+# safer for partition boundaries: keep ghost vertices "on" (avoid holes)
+if n_ghost:
+    vertex_in_nucleus[n_local:] = True
 
-# Expand to vector-dof mask (each vertex has gdim dof entries)
-bs = V.dofmap.bs  # should be gdim
-assert bs == gdim, f"Unexpected block size: bs={bs}, gdim={gdim}"
-
+bs = V.dofmap.bs
+assert bs == gdim
 dof_in_nucleus = np.repeat(vertex_in_nucleus, bs)
 
+# We'll write u_out where nucleus dofs are zero
+u_out = fem.Function(V, name="u")  # name "u" for ParaView convenience
 
 # -----------------------------
 # Variational problem (cytoplasm only)
 # -----------------------------
-u = u_outer
-u_prev = u_outer_prev
-v = ufl.TestFunction(V)
-du = ufl.TrialFunction(V)
-
-dx = dx_c  # integrate ONLY over cytoplasm cells (tag=1)
+dx = dx_c  # integrate ONLY over cytoplasm cells
 
 sigma_e = (E / (1 + nu)) * eps(u) + (E * nu / ((1 + nu) * (1 - 2 * nu))) * ufl.tr(eps(u)) * I
 sigma_v = (mu1 / _dt) * (eps(u) - eps(u_prev)) + (mu2 / _dt) * (phi(u) - phi(u_prev)) * I
 sigma = sigma_e + sigma_v
 
 F_vol = ufl.inner(sigma, ufl.grad(v)) * dx
-F_rhs = c_coupling * P * ufl.div(v) * dx  # P currently from init_state
+F_rhs = c_coupling * P * ufl.div(v) * dx
 
-# Neumann BC terms on outer boundary and nucleus interface (facet integrals)
 zero_flux = fem.Constant(msh, PETSc.ScalarType((0.0, 0.0, 0.0)))
-_, F_bc_inner = bc_u.set_bc_inner_neumann(zero_flux, v, ds_n)  # Gamma_n (tag=12)
-_, F_bc_outer = bc_u.set_bc_outer_neumann(zero_flux, v, ds_c)  # Gamma_c (tag=11)
-F_bc = F_bc_outer + F_bc_inner
+_, F_bc_inner = bc_u.set_bc_inner_neumann(zero_flux, v, ds_n)
+_, F_bc_outer = bc_u.set_bc_outer_neumann(zero_flux, v, ds_c)
+F_bc = F_bc_inner + F_bc_outer
 
-# Regularizer (tiny)
 eps_reg = fem.Constant(msh, PETSc.ScalarType(1e-6))
 dx_tagged = ufl.Measure("dx", domain=msh, subdomain_data=ct)
 F_reg = eps_reg * ufl.inner(u, v) * dx_tagged
@@ -130,7 +110,6 @@ solver.rtol = 1e-8
 solver.atol = 1e-10
 solver.max_it = 25
 
-
 # -----------------------------
 # Time stepping
 # -----------------------------
@@ -142,7 +121,6 @@ _dt.value = PETSc.ScalarType(dt_value)
 if MPI.COMM_WORLD.rank == 0:
     print(f"dt = {dt_value}, num_steps = {num_steps}")
 
-# Initial conditions
 u.x.array[:] = 0.0
 u_prev.x.array[:] = 0.0
 u.x.scatter_forward()
@@ -151,56 +129,43 @@ u_prev.x.scatter_forward()
 def tag(t: float) -> str:
     return f"{t:.6f}"
 
-
-# -----------------------------
-# Output: ONE XDMF with BOTH fields on SAME mesh
-#   - u_cytoplasm (what you solve)
-#   - u_nucleus_only (same u but zero outside nucleus nodes)
-# -----------------------------
-out_path = "data/cell_time_series.xdmf"
+out_path = "data/cytoplasm_only_u.xdmf"
 
 with io.XDMFFile(MPI.COMM_WORLD, out_path, "w") as xdmf:
-    # t=0
     msh.name = "mesh_at_t0.000000"
     xdmf.write_mesh(msh)
 
-    u.name = "u_cytoplasm"
-    xdmf.write_function(u, 0.0, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
-
-    # nucleus-only field at t=0 (zero)
-    xdmf.write_function(u_nucleus_only, 0.0, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
+    # write t=0 (u_out = u with nucleus zero)
+    u_out.x.array[:] = u.x.array
+    u_out.x.array[dof_in_nucleus] = 0.0
+    u_out.x.scatter_forward()
+    xdmf.write_function(u_out, 0.0, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
 
     for k in range(num_steps):
         t = (k + 1) * dt_value
 
-        # save previous
         u_prev.x.array[:] = u.x.array
         u_prev.x.scatter_forward()
 
-        # solve
         n_it, converged = solver.solve(u)
         u.x.scatter_forward()
 
         if MPI.COMM_WORLD.rank == 0:
             print(f"step {k+1}/{num_steps}, t={t:.6f}, Newton iters={n_it}, converged={converged}")
 
-        # update mesh geometry (incremental)
+        # update mesh geometry incrementally
         msh.geometry.x[:] += (
             u.x.array.reshape((-1, gdim)) - u_prev.x.array.reshape((-1, gdim))
         )
 
-        # build nucleus-only version of u (no filters later)
-        # copy u -> u_nucleus_only and zero out dofs not in nucleus
-        u_nucleus_only.x.array[:] = u.x.array
-        u_nucleus_only.x.array[~dof_in_nucleus] = 0.0
-        u_nucleus_only.x.scatter_forward()
+        # prepare output field: zero nucleus DOFs
+        u_out.x.array[:] = u.x.array
+        u_out.x.array[dof_in_nucleus] = 0.0
+        u_out.x.scatter_forward()
 
-        # write current mesh + both fields
         msh.name = f"mesh_at_t{tag(t)}"
         xdmf.write_mesh(msh)
-
-        xdmf.write_function(u, t, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
-        xdmf.write_function(u_nucleus_only, t, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
+        xdmf.write_function(u_out, t, mesh_xpath=f"/Xdmf/Domain/Grid[@Name='{msh.name}']")
 
         # reset (your pattern)
         u_prev.x.array[:] = u.x.array[:]
@@ -209,4 +174,4 @@ with io.XDMFFile(MPI.COMM_WORLD, out_path, "w") as xdmf:
         u.x.scatter_forward()
 
 if MPI.COMM_WORLD.rank == 0:
-    print(f"Written {out_path} with fields: u_cytoplasm and u_nucleus_only")
+    print(f"Written {out_path} (single function, nucleus DOFs zeroed each step)")
