@@ -4,10 +4,10 @@ from petsc4py import PETSc
 import numpy as np
 
 def par_cytoplasm_init(msh):
-    E = fem.Constant(msh, PETSc.ScalarType(1.0))
+    E = fem.Constant(msh, PETSc.ScalarType(1.5))
     nu = fem.Constant(msh, PETSc.ScalarType(0.3))
-    mu1 = fem.Constant(msh, PETSc.ScalarType(0.1))
-    mu2 = fem.Constant(msh, PETSc.ScalarType(0.06))
+    mu1 = fem.Constant(msh, PETSc.ScalarType(96.15))
+    mu2 = fem.Constant(msh, PETSc.ScalarType(250))
     c_coupling = fem.Constant(msh, PETSc.ScalarType(1.0))
 
     # zeta = fem.Constant(msh, PETSc.ScalarType(5.0))  # drag in nucleus
