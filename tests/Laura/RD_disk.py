@@ -9,14 +9,14 @@ from dolfinx.nls.petsc import NewtonSolver
 from dolfinx import fem, io, mesh as dmesh
 import ufl
 
-from src.mesh_initialization import build_spherical_shell_mesh,build_ball_mesh
-from src.parameter_init import init_state, par_cytoplasm_init
+from src.mesh_initialization import build_spherical_shell_mesh,build_ball_mesh, build_disk_mesh
+from src.parameter_init import init_state_disk, par_cytoplasm_init
 
 # -----------------------------
 # Build mesh + tags
 # -----------------------------
 #msh, ct, ft, dx, ds_outer, ds_inner = build_spherical_shell_mesh()
-msh, ct, ft, dx, ds_outer = build_ball_mesh(R=1.0, lc=0.3)
+msh, ct, ft, dx, ds_outer = build_disk_mesh(R=1.0, lc=0.05)
 tdim = msh.topology.dim
 gdim = msh.geometry.dim
 
@@ -61,7 +61,7 @@ if MPI.COMM_WORLD.rank == 0:
 # -----------------------------
 V = fem.functionspace(msh, ("Lagrange", 1, (gdim,)))
 Q = fem.functionspace(msh, ("Lagrange", 1))
-u, u_prev, *_ = init_state(V, Q)
+u, u_prev, *_ = init_state_disk(V, Q)
 
 v  = ufl.TestFunction(V)
 
@@ -225,20 +225,19 @@ u_prev.x.scatter_forward()
 
 
 # init chemistry: deal.II-like initial conditions
-def hash01(x, y, z, seed=0.0):
+def hash01(x, y, seed=0.0):
     """
     Deterministic pseudo-random number in [0,1) from coordinates.
     Better than np.random here because it is reproducible and MPI-safe.
     """
-    s = np.sin(12.9898 * x + 78.233 * y + 37.719 * z + seed) * 43758.5453123
+    s = np.sin(12.9898 * x + 78.233 * y) * 43758.5453123
     return s - np.floor(s)
 
 def dealii_mode(coords, k=2.08158):
     x = coords[:, 0]
     y = coords[:, 1]
-    z = coords[:, 2]
 
-    r = np.sqrt(x*x + y*y + z*z)
+    r = np.sqrt(x*x + y*y)
     mode = np.zeros_like(r)
 
     mask = r > 0.05
@@ -247,7 +246,7 @@ def dealii_mode(coords, k=2.08158):
 
     radial_part = ((3.0 / (k * k * rm * rm) - 1.0) * np.sin(kr) / (kr)
                    - 3.0 * np.cos(kr) / (k * k * rm * rm))
-    angular_part = (-x[mask] * x[mask] - y[mask] * y[mask] + 2.0 * z[mask] * z[mask]) / (rm * rm)
+    angular_part = (-x[mask] * x[mask] - y[mask] * y[mask]) / (rm * rm)
 
     mode[mask] = radial_part * angular_part
     mode = np.nan_to_num(mode, nan=0.0, posinf=0.0, neginf=0.0)
@@ -255,12 +254,13 @@ def dealii_mode(coords, k=2.08158):
     return mode
 
 def set_dealii_like_initial_conditions(Q, A, M, A_prev, M_prev):
-    coords = Q.tabulate_dof_coordinates().reshape((-1, gdim))
+    coords = Q.tabulate_dof_coordinates()
+    coords = coords[:, :2]   # берем только x,y для диска
     mode = dealii_mode(coords, k=2.08158)
 
     # independent deterministic "random" factors for A and M
-    randA = hash01(coords[:, 0], coords[:, 1], coords[:, 2], seed=0.123)
-    randM = hash01(coords[:, 0], coords[:, 1], coords[:, 2], seed=4.567)
+    randA = hash01(coords[:, 0], coords[:, 1], seed=0.123)
+    randM = hash01(coords[:, 0], coords[:, 1], seed=4.567)
 
     A0 = 1.0 + 0.1 * mode * randA
     M0 = 1.0 - 0.1 * mode * randM
@@ -281,7 +281,7 @@ set_dealii_like_initial_conditions(Q, A, M, A_prev, M_prev)
 def tag(t: float) -> str:
     return f"{t:.6f}"
 
-out_path = "data/shell_mech_plus_AM_with_pressure.xdmf"
+out_path = "data/disk_mech_plus_AM_with_pressure.xdmf"
 
 with io.XDMFFile(MPI.COMM_WORLD, out_path, "w") as xdmf:
     msh.name = "mesh_at_t0.000000"
@@ -299,7 +299,7 @@ with io.XDMFFile(MPI.COMM_WORLD, out_path, "w") as xdmf:
     Amax_boundary_list = []
     peak_boundary_xyz_list = []
 
-    coords_all = Q.tabulate_dof_coordinates().reshape((-1, gdim))
+    coords_all = Q.tabulate_dof_coordinates()[:, :2]
     r_all = np.linalg.norm(coords_all, axis=1)
 
     # для шара радиуса ~1: выбираем dof'ы, близкие к внешней границе
@@ -419,34 +419,34 @@ if MPI.COMM_WORLD.rank == 0:
     print("unique facet tags:", np.unique(ft.values))
     print("num nodes =", msh.geometry.x.shape[0])
     print("num cells =", msh.topology.index_map(msh.topology.dim).size_local)
-if MPI.COMM_WORLD.rank == 0:
-    import matplotlib.pyplot as plt
-    import numpy as np
+# if MPI.COMM_WORLD.rank == 0:
+#     import matplotlib.pyplot as plt
+#     import numpy as np
 
-    times_np = np.asarray(times, dtype=float)
-    Amax_boundary_np = np.asarray(Amax_boundary_list, dtype=float)
-    peak_boundary_xyz_np = np.asarray(peak_boundary_xyz_list, dtype=float)
+#     times_np = np.asarray(times, dtype=float)
+#     Amax_boundary_np = np.asarray(Amax_boundary_list, dtype=float)
+#     peak_boundary_xyz_np = np.asarray(peak_boundary_xyz_list, dtype=float)
 
-    if times_np.size > 0:
-        np.save("data/actin_peak_times.npy", times_np)
-        np.save("data/actin_peak_boundary_amplitude.npy", Amax_boundary_np)
-        np.save("data/actin_peak_boundary_xyz.npy", peak_boundary_xyz_np)
+#     if times_np.size > 0:
+#         np.save("data/actin_peak_times.npy", times_np)
+#         np.save("data/actin_peak_boundary_amplitude.npy", Amax_boundary_np)
+#         np.save("data/actin_peak_boundary_xyz.npy", peak_boundary_xyz_np)
 
-        plt.figure(figsize=(7, 4.5))
-        plt.plot(times_np, Amax_boundary_np, linewidth=2)
-        plt.xlabel("t")
-        plt.ylabel("A_peak on outer boundary")
-        plt.title("Actin peak dynamics on outer boundary")
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.savefig("data/actin_peak_boundary_dynamics.png", dpi=200)
-        plt.close()
+#         plt.figure(figsize=(7, 4.5))
+#         plt.plot(times_np, Amax_boundary_np, linewidth=2)
+#         plt.xlabel("t")
+#         plt.ylabel("A_peak on outer boundary")
+#         plt.title("Actin peak dynamics on outer boundary")
+#         plt.grid(True, alpha=0.3)
+#         plt.tight_layout()
+#         plt.savefig("data/actin_peak_boundary_dynamics.png", dpi=200)
+#         plt.close()
 
-        print("Saved:")
-        print("  data/actin_peak_times.npy")
-        print("  data/actin_peak_boundary_amplitude.npy")
-        print("  data/actin_peak_boundary_xyz.npy")
-        print("  data/actin_peak_boundary_dynamics.png")
+#         print("Saved:")
+#         print("  data/actin_peak_times.npy")
+#         print("  data/actin_peak_boundary_amplitude.npy")
+#         print("  data/actin_peak_boundary_xyz.npy")
+#         print("  data/actin_peak_boundary_dynamics.png")
 
-        last_xyz = peak_boundary_xyz_np[-1]
-        print(f"Last observed boundary peak point: ({last_xyz[0]:.6f}, {last_xyz[1]:.6f}, {last_xyz[2]:.6f})")
+#         last_xyz = peak_boundary_xyz_np[-1]
+#         print(f"Last observed boundary peak point: ({last_xyz[0]:.6f}, {last_xyz[1]:.6f}, {last_xyz[2]:.6f})")

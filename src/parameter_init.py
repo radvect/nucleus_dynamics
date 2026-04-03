@@ -72,6 +72,41 @@ def init_state(V, Q):
 
 
 
+def init_state_disk(V, Q):
+    gdim = V.mesh.geometry.dim
+
+    u = fem.Function(V, name="u")
+    u_prev = fem.Function(V, name="u_prev")
+
+    p = fem.Function(Q, name="p")
+    p_prev = fem.Function(Q, name="p_prev")
+
+
+    # u(t=0) = 0, 0
+
+    def u_init(x):
+        return np.vstack((0.0*x[0], 0.0*x[1]))
+    
+    u.interpolate(u_init)
+    u_prev.interpolate(u_init)
+
+    # p(t=0) = y
+    def p_init(x):
+        return x[1]
+
+    p.interpolate(p_init)
+    p_prev.interpolate(p_init)
+
+
+    u.x.scatter_forward()
+    u_prev.x.scatter_forward()
+    p.x.scatter_forward()
+    p_prev.x.scatter_forward()
+
+    return u, u_prev, p, p_prev
+
+
+
 def init_state_nucleus(V, Q):
     gdim = V.mesh.geometry.dim
 

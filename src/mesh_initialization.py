@@ -267,3 +267,40 @@ def build_ball_mesh(
     return msh, ct, ft, dx_ball, ds_outer
 def mesh_update():
     pass
+
+
+def build_disk_mesh(
+    R: float = 1.0,
+    lc: float = 0.05,
+):
+    import gmsh
+    from mpi4py import MPI
+    from dolfinx import io
+    import ufl
+
+    gmsh.initialize()
+    gmsh.model.add("disk_2d")
+
+    # круг → поверхность (2D!)
+    disk = gmsh.model.occ.addDisk(0.0, 0.0, 0.0, R, R)
+    gmsh.model.occ.synchronize()
+
+    # область
+    gmsh.model.addPhysicalGroup(2, [disk], tag=1)
+
+    # граница (окружность)
+    boundary = gmsh.model.getBoundary([(2, disk)], oriented=False)
+    curve_tags = [c[1] for c in boundary if c[0] == 1]
+
+    gmsh.model.addPhysicalGroup(1, curve_tags, tag=11)
+
+    gmsh.model.mesh.setSize(gmsh.model.getEntities(0), lc)
+    gmsh.model.mesh.generate(2)
+
+    msh, ct, ft = io.gmshio.model_to_mesh(gmsh.model, MPI.COMM_WORLD, 0, gdim=2)
+    gmsh.finalize()
+
+    dx = ufl.Measure("dx", domain=msh, subdomain_data=ct)
+    ds = ufl.Measure("ds", domain=msh, subdomain_data=ft)
+
+    return msh, ct, ft, dx(1), ds(11)
